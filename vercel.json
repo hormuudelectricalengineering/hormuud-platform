@@ -2,8 +2,5 @@
   "buildCommand": "npx turbo run build",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "outputDirectory": "apps/web/.next",
-  "env": {
-    "NODE_ENV": "production"
-  }
+  "outputDirectory": ".next"
 }
