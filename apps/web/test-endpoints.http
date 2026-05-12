@@ -1,0 +1,96 @@
+# Tests for the new backend endpoints
+# Use the VSCode "REST Client" extension to run these.
+# You will need to replace the Bearer token with a valid JWT from your local Supabase instance.
+# You will also need to replace the IDs (e.g., ENGINEER_ID) with valid UUIDs from your local DB.
+
+@baseUrl = http://localhost:3000/api
+@token = YOUR_SUPABASE_JWT_TOKEN
+@engineerId = YOUR_ENGINEER_UUID
+@customerId = YOUR_CUSTOMER_UUID
+@jobId = YOUR_JOB_UUID
+@paymentId = YOUR_PAYMENT_UUID
+@locationId = YOUR_LOCATION_UUID
+
+### 1. Engineer Location Updates
+POST {{baseUrl}}/engineers/{{engineerId}}/location
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "lat": 2.0469,
+  "lng": 45.3182
+}
+
+### 2. Create a Message
+POST {{baseUrl}}/messages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "jobId": "{{jobId}}",
+  "content": "I am on my way!"
+}
+
+### Get Messages
+GET {{baseUrl}}/messages?jobId={{jobId}}
+Authorization: Bearer {{token}}
+
+### 3. Payment Processing
+POST {{baseUrl}}/payments/{{paymentId}}/process
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}
+
+### 4. Engineer Rating
+POST {{baseUrl}}/ratings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "jobId": "{{jobId}}",
+  "engineerId": "{{engineerId}}",
+  "stars": 5,
+  "comment": "Excellent work and very fast!"
+}
+
+### 5. Create Saved Location
+POST {{baseUrl}}/customers/{{customerId}}/locations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Home",
+  "address": "Maka Al-Mukarama Road, Mogadishu",
+  "lat": 2.0469,
+  "lng": 45.3182
+}
+
+### Get Saved Locations
+GET {{baseUrl}}/customers/{{customerId}}/locations
+Authorization: Bearer {{token}}
+
+### Delete Saved Location
+DELETE {{baseUrl}}/customers/{{customerId}}/locations?id={{locationId}}
+Authorization: Bearer {{token}}
+
+### 6. Add Favorite Engineer
+POST {{baseUrl}}/customers/{{customerId}}/favorites
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "engineerId": "{{engineerId}}"
+}
+
+### Get Favorite Engineers
+GET {{baseUrl}}/customers/{{customerId}}/favorites
+Authorization: Bearer {{token}}
+
+### Remove Favorite Engineer
+DELETE {{baseUrl}}/customers/{{customerId}}/favorites?engineerId={{engineerId}}
+Authorization: Bearer {{token}}
+
+### 7. Earnings Breakdown
+GET {{baseUrl}}/engineers/{{engineerId}}/earnings?period=month
+Authorization: Bearer {{token}}

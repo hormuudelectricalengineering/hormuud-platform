@@ -1,0 +1,57 @@
+# A string used to distinguish different Supabase projects on the same host. Defaults to the working directory name when running `supabase init`.
+project_id = "hormuud-platform"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[studio]
+enabled = true
+port = 54323
+
+# Email testing server
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = true
+
+
+[auth.sms]
+enable_signup = true
+enable_confirmations = false
+
+[auth.sms.test_otp]
+"+252619000001" = "123456"
+"+252619000002" = "123456"
+
+
+[auth.sms.twilio]
+enabled = true
+account_sid = "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+message_service_sid = "MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+auth_token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+
+
+[analytics]
+enabled = false
+

@@ -1,0 +1,26 @@
+{
+  "name": "hormuud-platform",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "supabase": "supabase"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "expo-router": "~6.0.23",
+    "react-native-url-polyfill": "^3.0.0",
+    "supabase": "^2.98.0",
+    "turbo": "^1.11.2"
+  },
+  "dependencies": {
+    "expo": "^54.0.34"
+  }
+}
