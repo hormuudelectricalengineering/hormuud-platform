@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { FileEdit, Search, Check, X, User } from "lucide-react"
+import { FileEdit, Search, Check, X, User, PlusCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import type { CustomServiceRequest } from "@/lib/admin-data"
+import { toast } from "sonner"
 
 const statusColors: Record<string, string> = {
   pending: "warning",
@@ -82,6 +83,40 @@ export default function CustomServicesPage() {
     setRejectReason("")
     setProcessing(false)
     fetchRequests()
+  }
+
+  const handleCreateJob = async (req: CustomServiceRequest) => {
+    setProcessing(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("Not authenticated")
+
+      const { data: job, error } = await supabase
+        .from("jobs")
+        .insert({
+          customer_id: req.customer_id,
+          service_category: "custom",
+          description: req.description,
+          address: "To be confirmed",
+          status: "pending",
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      await supabase
+        .from("custom_service_requests")
+        .update({ job_id: job.id, reviewed_by_admin_id: user.id })
+        .eq("id", req.id)
+
+      toast.success("Job created successfully")
+      setSelectedRequest(null)
+      fetchRequests()
+    } catch (err) {
+      toast.error("Failed to create job")
+    }
+    setProcessing(false)
   }
 
   return (
@@ -263,6 +298,16 @@ export default function CustomServicesPage() {
                 >
                   Close
                 </Button>
+                {selectedRequest.status === "accepted" && !selectedRequest.job_id && (
+                  <Button
+                    className="flex-1"
+                    disabled={processing}
+                    onClick={() => handleCreateJob(selectedRequest)}
+                  >
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Create Job
+                  </Button>
+                )}
                 <Button
                   className="flex-1"
                   onClick={() => { window.location.href = `/admin/jobs` }}

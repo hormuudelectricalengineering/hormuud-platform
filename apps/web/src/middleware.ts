@@ -9,6 +9,8 @@ const allowedOrigins = [
   'http://127.0.0.1:3000',
   'http://127.0.0.1:8081',
   'http://127.0.0.1:8082',
+  'https://hormuud-platform.vercel.app',
+  'https://hormuud-electrical-services.vercel.app',
 ]
 
 export async function middleware(request: NextRequest) {

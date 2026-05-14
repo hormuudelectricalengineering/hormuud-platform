@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import {
   View,
-  TextInput,
   Text,
+  TextInput,
   StyleSheet,
   TextInputProps,
   ViewStyle,
@@ -12,12 +12,14 @@ import { colors, typography, spacing, borderRadius } from '../../theme'
 interface InputProps extends TextInputProps {
   label?: string
   error?: string
+  helperText?: string
   containerStyle?: ViewStyle
 }
 
 export default function Input({
   label,
   error,
+  helperText,
   containerStyle,
   style,
   ...props
@@ -26,7 +28,11 @@ export default function Input({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && (
+        <Text style={styles.label} numberOfLines={1}>
+          {label}
+        </Text>
+      )}
       <TextInput
         style={[
           styles.input,
@@ -39,14 +45,23 @@ export default function Input({
         onBlur={() => setIsFocused(false)}
         {...props}
       />
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+      {helperText && !error && (
+        <View style={styles.helperContainer}>
+          <Text style={styles.helperText}>{helperText}</Text>
+        </View>
+      )}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   label: {
     ...typography.label,
@@ -54,14 +69,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingVertical: 12,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     fontSize: 16,
     color: colors.text,
     backgroundColor: colors.background,
+    minHeight: 44,
   },
   inputFocused: {
     borderColor: colors.primary,
@@ -69,10 +85,20 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: colors.error,
+    borderWidth: 2,
+  },
+  errorContainer: {
+    marginTop: spacing.xs,
   },
   errorText: {
     ...typography.caption,
     color: colors.error,
+  },
+  helperContainer: {
     marginTop: spacing.xs,
+  },
+  helperText: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
 })

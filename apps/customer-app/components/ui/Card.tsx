@@ -1,4 +1,4 @@
-import { View, ViewStyle, ReactNode } from 'react-native'
+import { View, ReactNode, ViewStyle } from 'react-native'
 import { colors, spacing, borderRadius, elevation } from '../../theme'
 
 interface CardProps {
@@ -13,14 +13,14 @@ export default function Card({ children, style, variant = 'elevated' }: CardProp
       backgroundColor: colors.surface,
       borderRadius: borderRadius.md,
       padding: spacing.md,
-      marginBottom: spacing.sm + 4,
-      ...elevation.low,
+      marginBottom: spacing.sm,
+      ...elevation.medium,
     },
     outlined: {
       backgroundColor: colors.surface,
       borderRadius: borderRadius.md,
       padding: spacing.md,
-      marginBottom: spacing.sm + 4,
+      marginBottom: spacing.sm,
       borderWidth: 1,
       borderColor: colors.border,
     },
@@ -28,7 +28,7 @@ export default function Card({ children, style, variant = 'elevated' }: CardProp
       backgroundColor: colors.backgroundSecondary,
       borderRadius: borderRadius.md,
       padding: spacing.md,
-      marginBottom: spacing.sm + 4,
+      marginBottom: spacing.sm,
     },
   }
 

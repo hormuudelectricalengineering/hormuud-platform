@@ -66,19 +66,19 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto p-4 space-y-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href || 
-            (item.href !== "/admin" && pathname.startsWith(item.href))
+            (item.href !== "/admin" && pathname.startsWith(item.href + "/"))
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out",
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:translate-x-0.5"
               )}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className={cn("h-4 w-4", isActive && "drop-shadow-sm")} />
               <span className="flex-1">{item.label}</span>
               {item.href === "/admin/job-queue" && <PendingCount endpoint="/api/admin/job-queue/count" />}
               {item.href === "/admin/custom-services" && <PendingCount endpoint="/api/admin/custom-services/count" param="pending_count" />}
@@ -92,10 +92,10 @@ export function Sidebar() {
         <Link
           href="/admin/settings"
           className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out",
             pathname === "/admin/settings"
-              ? "bg-sidebar-accent text-sidebar-accent-foreground"
-              : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              ? "bg-primary text-primary-foreground shadow-md"
+              : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:translate-x-0.5"
           )}
         >
           <Settings className="h-4 w-4" />

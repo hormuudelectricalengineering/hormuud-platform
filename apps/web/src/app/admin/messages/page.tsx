@@ -1,12 +1,13 @@
 "use client"
 
 import { useEffect, useState, useRef, useCallback } from "react"
-import { Search, Send, User, MessageSquare } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Search, Send, User, MessageSquare, Reply, Pencil, Trash2, X, Check } from "lucide-react"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 interface Conversation {
   user_id: string
@@ -23,18 +24,16 @@ interface MessageData {
   sender_id: string
   recipient_id: string
   message_text: string | null
+  reply_to_id: string | null
+  edited_at: string | null
+  is_deleted: boolean
   created_at: string
   is_read: boolean
 }
 
-const supabase = createClient()
-
-async function getAdminId(): Promise<string | null> {
-  const { data } = await supabase.auth.getUser()
-  return data.user?.id || null
-}
-
 export default function AdminMessagesPage() {
+  const [supabase] = useState(() => createClient())
+
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [messages, setMessages] = useState<MessageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,13 +44,22 @@ export default function AdminMessagesPage() {
   const [adminId, setAdminId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  const [replyingTo, setReplyingTo] = useState<MessageData | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editText, setEditText] = useState("")
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
   useEffect(() => {
-    getAdminId().then(setAdminId)
-  }, [])
+    supabase.auth.getUser().then(({ data }) => {
+      setAdminId(data.user?.id || null)
+    })
+  }, [supabase])
 
   const fetchConversations = useCallback(async () => {
     if (!adminId) return
@@ -128,22 +136,82 @@ export default function AdminMessagesPage() {
   }, [selectedUser, adminId, fetchConversations])
 
   useEffect(() => {
+    const channel = supabase
+      .channel("admin-messages-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => {
+        fetchConversations()
+        fetchMessages()
+      })
+      .subscribe()
     fetchMessages()
     const interval = setInterval(fetchMessages, 10000)
-    return () => clearInterval(interval)
-  }, [fetchMessages])
+    return () => { clearInterval(interval); supabase.removeChannel(channel) }
+  }, [fetchMessages, fetchConversations])
 
   const handleSend = async () => {
     if (!messageText.trim() || !selectedUser || !adminId) return
     setSending(true)
-    await supabase.from("messages").insert({
+    const payload: Record<string, any> = {
       sender_id: adminId,
       recipient_id: selectedUser,
       message_text: messageText.trim(),
-    })
+    }
+    if (replyingTo) {
+      payload.reply_to_id = replyingTo.id
+    }
+    await supabase.from("messages").insert(payload)
     setMessageText("")
+    setReplyingTo(null)
     setSending(false)
     fetchMessages()
+  }
+
+  const handleEdit = async (msg: MessageData) => {
+    if (!editText.trim()) return
+    setSavingEdit(true)
+    const { error } = await supabase
+      .from("messages")
+      .update({ message_text: editText.trim(), edited_at: new Date().toISOString() })
+      .eq("id", msg.id)
+    if (error) {
+      toast.error("Failed to edit message")
+    } else {
+      toast.success("Message edited")
+      setEditingId(null)
+      setEditText("")
+      fetchMessages()
+    }
+    setSavingEdit(false)
+  }
+
+  const handleDelete = async (msg: MessageData) => {
+    setDeleting(true)
+    const { error } = await supabase
+      .from("messages")
+      .update({ is_deleted: true })
+      .eq("id", msg.id)
+    if (error) {
+      toast.error("Failed to delete message")
+    } else {
+      toast.success("Message deleted")
+      setDeletingId(null)
+      fetchMessages()
+    }
+    setDeleting(false)
+  }
+
+  const startEdit = (msg: MessageData) => {
+    setEditingId(msg.id)
+    setEditText(msg.message_text || "")
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditText("")
+  }
+
+  const findRepliedMessage = (replyToId: string): MessageData | undefined => {
+    return messages.find(m => m.id === replyToId)
   }
 
   const filteredConvs = conversations.filter(c =>
@@ -229,27 +297,107 @@ export default function AdminMessagesPage() {
                 {messages.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">No messages yet. Send a message to start.</div>
                 ) : (
-                  messages.map(msg => (
-                    <div key={msg.id} className={`flex ${msg.sender_id === adminId ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[70%] p-3 rounded-lg text-sm ${
-                        msg.sender_id === adminId
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      }`}>
-                        <p>{msg.message_text}</p>
-                        <p className={`text-xs mt-1 ${
-                          msg.sender_id === adminId ? "text-primary-foreground/70" : "text-muted-foreground"
-                        }`}>
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+                  messages.filter(m => !m.is_deleted || m.sender_id === adminId).map(msg => {
+                    const isAdmin = msg.sender_id === adminId
+                    const repliedTo = msg.reply_to_id ? findRepliedMessage(msg.reply_to_id) : null
+                    const isEditing = editingId === msg.id
+
+                    return (
+                      <div key={msg.id} className={`flex ${isAdmin ? "justify-end" : "justify-start"} group`}>
+                        <div className={`max-w-[70%] ${isAdmin ? "items-end" : "items-start"} flex flex-col`}>
+                          {repliedTo && (
+                            <div className={`text-xs p-2 rounded-t-lg border-l-2 border-primary/40 bg-muted/50 mb-0.5 max-w-full ${isAdmin ? "text-right" : "text-left"}`}>
+                              <p className="font-medium text-muted-foreground">
+                                Replying to {repliedTo.sender_id === adminId ? "yourself" : selectedProfile?.full_name || "message"}
+                              </p>
+                              <p className="text-muted-foreground/70 truncate">{repliedTo.is_deleted ? "[deleted]" : repliedTo.message_text}</p>
+                            </div>
+                          )}
+
+                          <div className={`p-3 rounded-lg text-sm ${
+                            isAdmin
+                              ? "bg-primary text-primary-foreground rounded-br-md"
+                              : "bg-muted rounded-bl-md"
+                          } ${msg.is_deleted ? "opacity-60 italic" : ""}`}>
+                            {isEditing ? (
+                              <div className="flex gap-2 items-center">
+                                <Input
+                                  value={editText}
+                                  onChange={e => setEditText(e.target.value)}
+                                  className="min-w-[200px] bg-background text-foreground"
+                                  autoFocus
+                                />
+                                <Button size="sm" variant="ghost" className="text-primary-foreground hover:text-primary-foreground/80" onClick={() => handleEdit(msg)} disabled={savingEdit || !editText.trim()}>
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="text-primary-foreground hover:text-primary-foreground/80" onClick={cancelEdit}>
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                {msg.is_deleted ? (
+                                  <span className="italic opacity-70">[deleted]</span>
+                                ) : (
+                                  <p>{msg.message_text}</p>
+                                )}
+                                <div className={`flex items-center justify-between gap-2 mt-1`}>
+                                  <p className={`text-xs ${
+                                    isAdmin ? "text-primary-foreground/70" : "text-muted-foreground"
+                                  }`}>
+                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {msg.edited_at && !msg.is_deleted && <span className="ml-1 opacity-70">(edited)</span>}
+                                  </p>
+                                </div>
+                              </>
+                            )}
+                          </div>
+
+                          {isAdmin && !msg.is_deleted && !isEditing && (
+                            <div className="flex gap-0.5 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => { setReplyingTo(msg); setMessageText("") }}
+                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                title="Reply"
+                              >
+                                <Reply className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => startEdit(msg)}
+                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                title="Edit"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setDeletingId(msg.id)}
+                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    )
+                  })
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="p-4 border-t">
+              <div className="p-4 border-t space-y-2">
+                {replyingTo && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm">
+                    <Reply className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground truncate flex-1">
+                      Replying to: {replyingTo.message_text}
+                    </span>
+                    <button onClick={() => setReplyingTo(null)} className="p-0.5 hover:bg-background rounded text-muted-foreground">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
                 <form onSubmit={e => { e.preventDefault(); handleSend() }} className="flex gap-2">
                   <Input value={messageText} onChange={e => setMessageText(e.target.value)} placeholder="Type a message..." className="flex-1" />
                   <Button type="submit" disabled={!messageText.trim() || sending}>
@@ -261,6 +409,30 @@ export default function AdminMessagesPage() {
           )}
         </Card>
       </div>
+
+      {deletingId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold text-destructive">Delete Message</h2>
+              <button onClick={() => setDeletingId(null)} className="p-1 hover:bg-muted rounded text-muted-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete this message? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-3 p-6 border-t bg-muted/30">
+              <Button variant="outline" className="flex-1" onClick={() => setDeletingId(null)}>Cancel</Button>
+              <Button variant="destructive" className="flex-1" disabled={deleting} onClick={() => handleDelete(messages.find(m => m.id === deletingId)!)}>
+                {deleting ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

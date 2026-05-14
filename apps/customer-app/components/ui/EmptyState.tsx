@@ -11,7 +11,7 @@ interface EmptyStateProps {
 export default function EmptyState({ icon = 'document-text-outline', title, message }: EmptyStateProps) {
   return (
     <View style={styles.container}>
-      <Ionicons name={icon} size={56} color={colors.textTertiary} />
+      <Ionicons name={icon} size={64} color={colors.textTertiary} />
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
     </View>

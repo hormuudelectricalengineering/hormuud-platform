@@ -9,15 +9,18 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { jobId, content } = await request.json()
-    if (!jobId || !content) return NextResponse.json({ error: 'Missing jobId or content' }, { status: 400 })
+    const { recipient_id, message_text, job_id } = await request.json()
+    if (!recipient_id || !message_text) {
+      return NextResponse.json({ error: 'Missing recipient_id or message_text' }, { status: 400 })
+    }
 
     const { data: message, error } = await supabaseAdmin
       .from('messages')
       .insert({
-        job_id: jobId,
         sender_id: user.id,
-        content
+        recipient_id,
+        message_text,
+        job_id: job_id || null,
       })
       .select()
       .single()
@@ -39,20 +42,32 @@ export async function GET(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { searchParams } = new URL(request.url)
-    const jobId = searchParams.get('jobId')
+    const userId = searchParams.get('userId')
+    const otherUserId = searchParams.get('otherUserId')
 
-    if (!jobId) return NextResponse.json({ error: 'jobId is required' }, { status: 400 })
+    if (otherUserId) {
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
+        .order('created_at', { ascending: true })
 
-    // Use regular client so RLS enforces they can only see their own job's messages
-    const { data: messages, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('job_id', jobId)
-      .order('created_at', { ascending: true })
+      if (error) throw error
+      return NextResponse.json({ messages })
+    }
 
-    if (error) throw error
+    if (userId) {
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
 
-    return NextResponse.json({ messages })
+      if (error) throw error
+      return NextResponse.json({ messages })
+    }
+
+    return NextResponse.json({ error: 'Provide userId or otherUserId' }, { status: 400 })
   } catch (err: any) {
     console.error(err)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

@@ -4,26 +4,44 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+const DialogContext = React.createContext<{ open: boolean; onOpenChange: (open: boolean) => void }>({
+  open: false,
+  onOpenChange: () => {},
+})
+
 interface DialogProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
   children?: React.ReactNode
 }
 
-const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) => {
-  return <>{children}</>
+const Dialog: React.FC<DialogProps> = ({ open: controlledOpen, onOpenChange: controlledOnOpenChange, children }) => {
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const onOpenChange = isControlled ? controlledOnOpenChange! : setInternalOpen
+
+  return (
+    <DialogContext.Provider value={{ open, onOpenChange }}>
+      {children}
+    </DialogContext.Provider>
+  )
 }
 
 const DialogTrigger = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }
->(({ className, ...props }, ref) => (
-  <button
-    ref={ref}
-    className={cn("", className)}
-    {...props}
-  />
-))
+>(({ className, onClick, ...props }, ref) => {
+  const { onOpenChange } = React.useContext(DialogContext)
+  return (
+    <button
+      ref={ref}
+      onClick={(e) => { onOpenChange(true); onClick?.(e) }}
+      className={cn("", className)}
+      {...props}
+    />
+  )
+})
 DialogTrigger.displayName = "DialogTrigger"
 
 const DialogOverlay = React.forwardRef<
@@ -41,22 +59,18 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = "DialogOverlay"
 
-interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-}
-
 const DialogContent = React.forwardRef<
   HTMLDivElement,
-  DialogContentProps
->(({ className, children, open, onOpenChange, ...props }, ref) => {
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, children, ...props }, ref) => {
+  const { open, onOpenChange } = React.useContext(DialogContext)
   if (!open) return null
   
   return (
     <>
       <div 
         className="fixed inset-0 z-50 bg-black/80" 
-        onClick={() => onOpenChange?.(false)}
+        onClick={() => onOpenChange(false)}
       />
       <div
         ref={ref}
@@ -68,7 +82,7 @@ const DialogContent = React.forwardRef<
       >
         {children}
         <button
-          onClick={() => onOpenChange?.(false)}
+          onClick={() => onOpenChange(false)}
           className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">

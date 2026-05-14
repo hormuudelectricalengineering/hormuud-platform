@@ -1,8 +1,9 @@
 import { Suspense } from "react"
-import { Users, Wrench, Clock, TrendingUp, Activity } from "lucide-react"
+import { Users, Wrench, Clock, TrendingUp, Activity, BarChart3 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getDashboardStats, getRecentJobs } from "@/lib/admin-data"
+import { createClient } from "@/lib/supabase/server"
 
 async function StatsCards() {
   const stats = await getDashboardStats()
@@ -17,14 +18,14 @@ async function StatsCards() {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {cardData.map((card, i) => (
-        <Card key={i} className="relative overflow-hidden">
+        <Card key={i} className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">{card.title}</p>
                 <p className="text-2xl font-bold mt-1">{card.value}</p>
               </div>
-              <div className={`p-3 rounded-xl ${card.bg}`}>
+              <div className={`p-3 rounded-xl transition-transform duration-300 ${card.bg}`}>
                 <card.icon className={`h-5 w-5 ${card.color}`} />
               </div>
             </div>
@@ -53,9 +54,9 @@ async function RecentActivity() {
         <Activity className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-1">
           {jobs.map((job) => (
-            <div key={job.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+            <div key={job.id} className="flex items-center justify-between py-3 px-2 -mx-2 rounded-lg transition-colors hover:bg-muted/50 cursor-pointer">
               <div className="flex flex-col gap-1">
                 <span className="text-sm font-medium">{job.service?.name || job.service_category}</span>
                 <span className="text-xs text-muted-foreground">{job.address}</span>
@@ -74,12 +75,61 @@ async function RecentActivity() {
   )
 }
 
+async function JobStatusChart() {
+  const supabase = await createClient()
+  const [{ count: pending }, { count: assigned }, { count: inProgress }, { count: completed }, { count: cancelled }] =
+    await Promise.all([
+      supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "assigned"),
+      supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "in_progress"),
+      supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "completed"),
+      supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "cancelled"),
+    ])
+
+  const data = [
+    { label: "Pending", value: pending || 0, color: "bg-amber-500" },
+    { label: "Assigned", value: assigned || 0, color: "bg-blue-500" },
+    { label: "In Progress", value: inProgress || 0, color: "bg-indigo-500" },
+    { label: "Completed", value: completed || 0, color: "bg-emerald-500" },
+    { label: "Cancelled", value: cancelled || 0, color: "bg-red-500" },
+  ]
+
+  const maxValue = Math.max(...data.map(d => d.value), 1)
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-base font-medium">Jobs by Status</CardTitle>
+        <BarChart3 className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {data.map(item => (
+            <div key={item.label}>
+              <div className="flex items-center justify-between text-sm mb-1">
+                <span className="font-medium">{item.label}</span>
+                <span className="text-muted-foreground">{item.value}</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${item.color}`}
+                  style={{ width: `${(item.value / maxValue) * 100}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 async function QuickStats() {
   const stats = await getDashboardStats()
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Card>
+      <Card className="transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium">Pending Jobs</CardTitle>
           <Badge variant="warning">{stats.pendingJobs}</Badge>
@@ -92,7 +142,7 @@ async function QuickStats() {
           </div>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium">Completed Today</CardTitle>
           <Badge variant="success">{stats.completedToday}</Badge>
@@ -125,9 +175,14 @@ export default function AdminDashboard() {
         <Suspense fallback={<div className="h-80 bg-muted rounded-lg animate-pulse"></div>}>
           <RecentActivity />
         </Suspense>
-        <Suspense fallback={<div className="h-80 bg-muted rounded-lg animate-pulse"></div>}>
-          <QuickStats />
-        </Suspense>
+        <div className="space-y-6">
+          <Suspense fallback={<div className="h-48 bg-muted rounded-lg animate-pulse"></div>}>
+            <JobStatusChart />
+          </Suspense>
+          <Suspense fallback={<div className="h-32 bg-muted rounded-lg animate-pulse"></div>}>
+            <QuickStats />
+          </Suspense>
+        </div>
       </div>
     </div>
   )

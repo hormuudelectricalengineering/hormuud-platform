@@ -1,0 +1,105 @@
+Full Implementation Plan — Hormuud v2.0 Simplified
+Phase 0 — Remove Old Documentation
+Pre-cleanup so no stale docs mislead during implementation
+- [ ] Delete hormuud_antigravity_prompt.md
+- [ ] Delete Hormuud_Electrical_Services_PRD_v1.md
+- [ ] Delete docs/ directory entirely (7 files + fixes/ subdir)
+- [ ] Delete Phase_3_new_platform/ directory entirely (6 files)
+- [ ] Verify no stale docs remain
+---
+Phase 1 — Database Migration
+Schema + seed data before app code references it
+- [ ] Create migration supabase/migrations/20260512_simplify_platform.sql
+  - [ ] Create services table (name, description, category, base_price, icon_url, is_active, created_by_admin_id)
+  - [ ] Create custom_service_requests table (customer_id, description, estimated_budget, photos, status, admin_response, reviewed_by, job_id)
+  - [ ] Create messages table (sender_id, recipient_id, message_text, message_type, image_url, is_read, read_at, job_id nullable)
+  - [ ] Update profiles: add is_active, deactivated_at, deactivated_by_admin_id, specialties, must_change_password, password_changed_at
+  - [ ] Simplify jobs: engineer_id → references profiles (was engineers), service_category → service_id, remove estimated_price/final_price, add assigned_by_admin_id, assigned_at, completed_at, completed_by
+  - [ ] Keep engineer_assignments (audit trail)
+  - [ ] Drop tables: payments, ratings, engineers (migrate data first), favorite_engineers, saved_locations
+  - [ ] Drop unused enums (payment_method, payment_status)
+  - [ ] Seed 10 default services (AC Install $150, Short Circuit $60, Full Wiring $300, Solar Panel $500, Generator Repair $120, etc.)
+  - [ ] Update RLS policies for all new/changed tables
+- [ ] Apply migration to Supabase
+- [ ] Verify migration, test seed data
+---
+Phase 2 — Admin Dashboard
+Central control hub — services catalog, dispatch, messaging
+- [ ] Update sidebar (sidebar.tsx)
+  - [ ] Add: Services, Custom Services, Messages
+  - [ ] Remove: Map, Analytics, Credential Requests
+  - [ ] Add badge counts for pending queue items + unread messages
+- [ ] Create /admin/services/
+  - [ ] page.tsx — CRUD grid (name, category, price, active toggle)
+  - [ ] Create/edit service form (modal
+  - [ ] Soft-delete (set is_active = false)
+- [ ] Create /admin/custom-services/
+  - [ ] page.tsx — pending requests list with customer info
+  - [ ] Accept → convert to job, assign engineer
+  - [ ] Reject → reason modal, notify customer
+- [ ] Create /admin/messages/
+  - [ ] Left panel: conversation list with unread badges
+  - [ ] Right panel: chat view + send message form
+  - [ ] Mark messages read on conversation open
+- [ ] Update /admin/customers/ — add activate/deactivate, remove payment columns
+- [ ] Update /admin/engineers/ — add Create Engineer form, remove earnings/ratings columns, add activate/deactivate/delete
+- [ ] Update /admin/jobs/ — show service name (from services table), remove price columns
+- [ ] Update /admin/job-queue/ — link to service_id, simplified assignment (no payment/rating checks)
+- [ ] Update /admin/page.tsx — simple count stats only, remove analytics charts
+- [ ] Delete old pages — analytics/, credential-requests/
+- [ ] Remove CredentialRequestsLink component
+---
+Phase 3 — Customer App
+Browse services, place orders, custom requests, messaging
+- [ ] Update _layout.tsx tab bar
+  - [ ] Replace Tracking → Orders tab
+  - [ ] Add Custom Service tab
+  - [ ] Add unread badge to Messages tab
+  - [ ] Remove favorites/saved-locations tabs (if present)
+- [ ] Create orders.tsx
+  - [ ] Sections: Active / Completed / Cancelled
+  - [ ] Show service name, status, assigned engineer
+  - [ ] Cancel button for pending, Mark Complete for in-progress
+- [ ] Create custom-service.tsx
+  - [ ] Form: description, estimated budget, photo upload
+  - [ ] Existing requests list below form with status badges
+- [ ] Update messages.tsx — user-to-user conversation list (not job-scoped)
+- [ ] Create chat screen (chat/[id].tsx) — chat with engineer + admin, read tracking
+- [ ] Update index.tsx (home) — fetch services from DB API (replace SERVICE_CATEGORIES)
+- [ ] Delete old screens — tracking.tsx, favorites.tsx, saved-locations.tsx, rating.tsx
+- [ ] Update account.tsx — remove payment methods, simplify to profile + order history + logout
+- [ ] Add in-app badge polling (unread messages 30s)
+---
+Phase 4 — Engineer App
+Accept/complete jobs, messaging, forced password change
+- [ ] Update _layout.tsx tab bar
+  - [ ] Replace Earnings → Messages tab (with unread badge)
+- [ ] Create messages.tsx — conversation list (chat with customer + admin)
+- [ ] Create chat screen (chat/[id].tsx)
+- [ ] Update index.tsx (jobs) — pending: Accept/Decline, in-progress: Mark Complete, show service name
+- [ ] Update account.tsx — remove earnings/bank/sections, add edit profile + change password
+- [ ] Add forced password change — check must_change_password on login, redirect to change-password
+- [ ] Delete earnings.tsx
+- [ ] Add in-app badge polling (unread messages 30s, new assignments)
+---
+Phase 5 — Test & Verify
+All 3 apps communicating through new schema
+- [ ] Verify DB migration (tables, RLS, seed data)
+- [ ] Admin flows: CRUD services, accept/reject custom requests, assign engineers, send messages, activate/deactivate users
+- [ ] Customer flows: register/login, browse DB-powered catalog, place order, create custom request, track status, chat
+- [ ] Engineer flows: login with admin-created creds, forced password change, accept/complete jobs, chat
+- [ ] Cross-app messaging: customer↔engineer↔admin
+- [ ] In-app badges: verify polling queries return correct counts
+- [ ] Edge cases: deactivated users blocked, empty states, OfflineBanner, LoadingSpinner
+- [ ] npm run lint — 0 errors all 3 workspaces
+- [ ] Bundle size + startup time checks
+---
+Phase 6 — Clean Project
+Remove dead code once everything works
+- [ ] Delete unused API routes (payments, ratings, earnings endpoints)
+- [ ] Remove unused stores (payment store, rating store, earnings store)
+- [ ] Remove unused dependencies (payment SDKs, push notification packages)
+- [ ] Remove SERVICE_CATEGORIES constant from customer app
+- [ ] Remove old migration files if consolidated
+- [ ] Delete simplified/ working directory (spec + draft SQL merged into main codebase)
+- [ ] Final lint + typecheck across all workspaces

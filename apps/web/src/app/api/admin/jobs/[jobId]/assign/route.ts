@@ -19,7 +19,10 @@ export async function POST(request: NextRequest, context: RouteParams) {
       { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
     )
 
-    const adminId = '00000000-0000-0000-0000-000000000001'
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const adminId = user.id
+
     const { engineerId } = await request.json()
 
     const { data: job, error: jobError } = await supabase

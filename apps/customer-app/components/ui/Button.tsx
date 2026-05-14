@@ -1,10 +1,4 @@
-import {
-  TouchableOpacity,
-  Text,
-  ActivityIndicator,
-  ViewStyle,
-  TextStyle,
-} from 'react-native'
+import { TouchableOpacity, Text, ActivityIndicator, ViewStyle, TextStyle } from 'react-native'
 import { colors, typography, spacing, borderRadius } from '../../theme'
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost'
@@ -37,7 +31,7 @@ export default function Button({
   const containerStyle: ViewStyle = {
     height,
     paddingHorizontal,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -46,14 +40,24 @@ export default function Button({
   const variantStyles: Record<ButtonVariant, ViewStyle> = {
     primary: {
       backgroundColor: colors.primary,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
     },
     secondary: {
       backgroundColor: 'transparent',
-      borderWidth: 1,
-      borderColor: colors.border,
+      borderWidth: 1.5,
+      borderColor: colors.primary,
     },
     danger: {
       backgroundColor: colors.error,
+      shadowColor: colors.error,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
     },
     ghost: {
       backgroundColor: 'transparent',
@@ -62,7 +66,7 @@ export default function Button({
 
   const textVariantStyles: Record<ButtonVariant, TextStyle> = {
     primary: { color: colors.textOnPrimary },
-    secondary: { color: colors.text },
+    secondary: { color: colors.primary },
     danger: { color: colors.textOnPrimary },
     ghost: { color: colors.primary },
   }
@@ -72,12 +76,12 @@ export default function Button({
       style={[
         containerStyle,
         variantStyles[variant],
-        (disabled || loading) && { opacity: 0.5, backgroundColor: disabled ? colors.disabled : undefined },
+        (disabled || loading) && { opacity: 0.5 },
         style,
       ]}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
+      activeOpacity={0.7}
     >
       {loading ? (
         <ActivityIndicator

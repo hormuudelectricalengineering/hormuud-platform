@@ -21,7 +21,11 @@ export default function Input({ label, error, containerStyle, style, ...props }:
         onBlur={() => setIsFocused(false)}
         {...props}
       />
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
     </View>
   )
 }
@@ -30,11 +34,12 @@ const styles = StyleSheet.create({
   container: { marginBottom: spacing.md },
   label: { ...typography.label, color: colors.text, marginBottom: spacing.sm },
   input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.sm,
+    borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md,
     paddingVertical: 12, paddingHorizontal: spacing.md, fontSize: 16,
     color: colors.text, backgroundColor: colors.background,
   },
   inputFocused: { borderColor: colors.primary, borderWidth: 2 },
   inputError: { borderColor: colors.error },
   errorText: { ...typography.caption, color: colors.error, marginTop: spacing.xs },
+  errorContainer: { marginTop: spacing.xs },
 })

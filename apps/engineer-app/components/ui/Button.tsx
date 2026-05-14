@@ -37,14 +37,14 @@ export default function Button({
   const containerStyle: ViewStyle = {
     height,
     paddingHorizontal,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
   }
 
   const variantStyles: Record<string, ViewStyle> = {
-    primary: { backgroundColor: colors.primary },
+    primary: { backgroundColor: colors.primary, shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 },
     secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
     danger: { backgroundColor: colors.error },
     ghost: { backgroundColor: 'transparent' },

@@ -108,32 +108,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   }
 }
 
-export async function getAllJobs(): Promise<Job[]> {
-  const supabase = await createClient()
-
-  const { data, error } = await supabase
-    .from("jobs")
-    .select("*, customer:profiles!jobs_customer_id_fkey!inner(full_name, phone), engineer:profiles!jobs_engineer_profile_id_fkey(full_name), service:services(name, base_price)")
-    .order("created_at", { ascending: false })
-    .limit(100)
-
-  if (error) console.error(error)
-  return data || []
-}
-
-export async function getPendingJobs(): Promise<Job[]> {
-  const supabase = await createClient()
-
-  const { data, error } = await supabase
-    .from("jobs")
-    .select("*, customer:profiles!jobs_customer_id_fkey!inner(full_name, phone), service:services(name, base_price)")
-    .eq("status", "pending")
-    .order("created_at", { ascending: false })
-
-  if (error) console.error(error)
-  return data || []
-}
-
 export async function getRecentJobs(limit: number = 10): Promise<Job[]> {
   const supabase = await createClient()
 
@@ -147,30 +121,4 @@ export async function getRecentJobs(limit: number = 10): Promise<Job[]> {
   return data || []
 }
 
-export async function getServices(): Promise<Service[]> {
-  const supabase = await createClient()
 
-  const { data, error } = await supabase
-    .from("services")
-    .select("*")
-    .order("name", { ascending: true })
-
-  if (error) console.error(error)
-  return data || []
-}
-
-export async function assignJob(jobId: string, engineerId: string) {
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from("jobs")
-    .update({
-      engineer_id: engineerId,
-      status: "assigned",
-      assigned_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", jobId)
-
-  if (error) throw error
-}
